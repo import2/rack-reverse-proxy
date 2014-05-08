@@ -88,8 +88,22 @@ module Rack
     end
 
     def create_response_headers http_response
-      headers = Hash[http_response.to_hash.collect { |k, v| [k, v.first] }]
+      puts "Headers: #{http_response.to_hash}"
+
+      headers = Hash[http_response.to_hash.collect { |k, v| [k, v.join("\n")] }]
       response_headers = Rack::Utils::HeaderHash.new(headers)
+      #
+      # response_headers = Rack::Utils::HeaderHash.new(http_response.to_hash)
+
+      # headers = Hash[http_response.to_hash.collect { |header, values| [header, values.join("\n")] }]
+      # response_headers = Rack::Utils::HeaderHash.new(headers)
+
+      if response_headers
+        if response_headers["Set-Cookie"].is_a?(Array)
+          response_headers["Set-Cookie"] = response_headers["Set-Cookie"].join("\n")
+        end
+      end
+
       # handled by Rack
       response_headers.delete('status')
       # TODO: figure out how to handle chunked responses

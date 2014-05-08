@@ -88,31 +88,18 @@ module Rack
     end
 
     def create_response_headers http_response
-      puts "Headers: #{http_response.to_hash}"
-
-      headers = Hash[http_response.to_hash.collect { |k, v| [k, v.join("\n")] }]
-      response_headers = Rack::Utils::HeaderHash.new(headers)
-      #
-      # response_headers = Rack::Utils::HeaderHash.new(http_response.to_hash)
-
-      # headers = Hash[http_response.to_hash.collect { |header, values| [header, values.join("\n")] }]
-      # response_headers = Rack::Utils::HeaderHash.new(headers)
+      response_headers = Rack::Utils::HeaderHash.new(http_response.to_hash)
 
       # handled by Rack
       response_headers.delete('status')
-      # TODO: figure out how to handle chunked responses
       response_headers.delete('transfer-encoding')
+
+      if response_headers && response_headers["Set-Cookie"].is_a?(Array)
+        response_headers['Set-Cookie'] = response_headers['Set-Cookie'].join("\n")
+      end
+
+      # TODO: figure out how to handle chunked responses
       # TODO: Verify Content Length, and required Rack headers
-      # response_headers
-
-      # if response_headers
-      #   if response_headers["Set-Cookie"].is_a?(Array)
-      #     response_headers["Set-Cookie"] = Array.wrap(response_headers["Set-Cookie"]).join("\n")
-      #   end
-      # end
-
-      puts "Headers 2: #{response_headers}"
-
       response_headers
     end
 

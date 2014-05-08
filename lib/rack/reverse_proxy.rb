@@ -4,7 +4,7 @@ require 'net/https'
 module Rack
   class ReverseProxy
     def initialize(app = nil, &b)
-      @app = app || lambda {|env| [404, [], []] }
+      @app = app || lambda { |env| [404, [], []] }
       @matchers = []
       @global_options = {:preserve_host => true, :x_forwarded_host => true, :matching => :all, :verify_ssl => true}
       instance_eval &b if block_given?
@@ -15,7 +15,7 @@ module Rack
       matcher = get_matcher rackreq.fullpath
       return @app.call(env) if matcher.nil?
 
-      uri = matcher.get_uri(rackreq.fullpath,env)
+      uri = matcher.get_uri(rackreq.fullpath, env)
       all_opts = @global_options.dup.merge(matcher.options)
       headers = Rack::Utils::HeaderHash.new
       env.each { |key, value|
@@ -39,25 +39,25 @@ module Rack
       session.start { |http|
         m = rackreq.request_method
         case m
-        when "GET", "HEAD", "DELETE", "OPTIONS", "TRACE"
-          req = Net::HTTP.const_get(m.capitalize).new(uri.request_uri, headers)
-          req.basic_auth all_opts[:username], all_opts[:password] if all_opts[:username] and all_opts[:password]
-        when "PUT", "POST"
-          req = Net::HTTP.const_get(m.capitalize).new(uri.request_uri, headers)
-          req.basic_auth all_opts[:username], all_opts[:password] if all_opts[:username] and all_opts[:password]
+          when "GET", "HEAD", "DELETE", "OPTIONS", "TRACE"
+            req = Net::HTTP.const_get(m.capitalize).new(uri.request_uri, headers)
+            req.basic_auth all_opts[:username], all_opts[:password] if all_opts[:username] and all_opts[:password]
+          when "PUT", "POST"
+            req = Net::HTTP.const_get(m.capitalize).new(uri.request_uri, headers)
+            req.basic_auth all_opts[:username], all_opts[:password] if all_opts[:username] and all_opts[:password]
 
-          if rackreq.body.respond_to?(:read) && rackreq.body.respond_to?(:rewind)
-            body = rackreq.body.read
-            req.content_length = body.size
-            rackreq.body.rewind
+            if rackreq.body.respond_to?(:read) && rackreq.body.respond_to?(:rewind)
+              body = rackreq.body.read
+              req.content_length = body.size
+              rackreq.body.rewind
+            else
+              req.content_length = rackreq.body.size
+            end
+
+            req.content_type = rackreq.content_type unless rackreq.content_type.nil?
+            req.body_stream = rackreq.body
           else
-            req.content_length = rackreq.body.size
-          end
-
-          req.content_type = rackreq.content_type unless rackreq.content_type.nil?
-          req.body_stream = rackreq.body
-        else
-          raise "method not supported: #{m}"
+            raise "method not supported: #{m}"
         end
 
         body = ''
@@ -88,7 +88,8 @@ module Rack
     end
 
     def create_response_headers http_response
-      response_headers = Rack::Utils::HeaderHash.new(http_response.to_hash)
+      headers = Hash[http_response.to_hash.collect { |k, v| [k, v.first] }]
+      response_headers = Rack::Utils::HeaderHash.new(headers)
       # handled by Rack
       response_headers.delete('status')
       # TODO: figure out how to handle chunked responses
@@ -104,7 +105,7 @@ module Rack
 
     def reverse_proxy matcher, url, opts={}
       raise GenericProxyURI.new(url) if matcher.is_a?(String) && url.is_a?(String) && URI(url).class == URI::Generic
-      @matchers << ReverseProxyMatcher.new(matcher,url,opts)
+      @matchers << ReverseProxyMatcher.new(matcher, url, opts)
     end
   end
 
@@ -122,6 +123,7 @@ module Rack
 
   class AmbiguousProxyMatch < Exception
     attr_reader :path, :matches
+
     def initialize(path, matches)
       @path = path
       @matches = matches
@@ -134,25 +136,25 @@ module Rack
     private
 
     def formatted_matches
-      matches.map {|matcher| matcher.to_s}.join(', ')
+      matches.map { |matcher| matcher.to_s }.join(', ')
     end
   end
 
   class ReverseProxyMatcher
-    def initialize(matching,url,options)
+    def initialize(matching, url, options)
       @matching=matching
       @url=url
       @options=options
       @matching_regexp= matching.kind_of?(Regexp) ? matching : /^#{matching.to_s}/
     end
 
-    attr_reader :matching,:matching_regexp,:url,:options
+    attr_reader :matching, :matching_regexp, :url, :options
 
     def match?(path)
       match_path(path) ? true : false
     end
 
-    def get_uri(path,env)
+    def get_uri(path, env)
       _url=(url.respond_to?(:call) ? url.call(env) : url.clone)
       if _url =~/\$\d/
         match_path(path).to_a.each_with_index { |m, i| _url.gsub!("$#{i.to_s}", m) }
@@ -161,9 +163,11 @@ module Rack
         URI.join(_url, path)
       end
     end
+
     def to_s
       %Q("#{matching.to_s}" => "#{url}")
     end
+
     private
     def match_path(path)
       path.match(matching_regexp)

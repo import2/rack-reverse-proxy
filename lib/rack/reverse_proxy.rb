@@ -94,7 +94,7 @@ module Rack
       response_headers.delete('status')
       response_headers.delete('transfer-encoding')
 
-      if response_headers && response_headers["Set-Cookie"].is_a?(Array)
+      if response_headers && response_headers['Set-Cookie'].is_a?(Array)
         response_headers['Set-Cookie'] = response_headers['Set-Cookie'].join("\n")
       end
 

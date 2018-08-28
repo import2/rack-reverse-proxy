@@ -88,8 +88,6 @@ module Rack
     end
 
     def create_response_headers http_response
-      puts "RACK RESPONSE Headers: #{http_response.to_hash}"
-      
       response_headers = Rack::Utils::HeaderHash.new(http_response.to_hash)
 
       # handled by Rack
